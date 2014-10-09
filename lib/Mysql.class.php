@@ -72,7 +72,7 @@ class MySQL {
     }
 
     function _parameterize($sql, $params) {
-        if (is_array($params)) {
+        if (is_array($params) && count($params) > 0) {
             foreach ($params as $key => $value) {
                 if (!is_numeric($value))
                     $value = $this->_quote($value);
@@ -256,8 +256,24 @@ class MySQL {
         }
     }
 
-    function Query($sql, $params) {
+    function Query($sql, $params = array()) {
+        if (!$params) {
+            $params = array();
+        }
         $this->_query($this->_parameterize($sql, $params));
+    }
+
+    function BatchQuery($sql) {
+        if (!is_array($sql)) {
+            $sql = str_replace(array("\r", "\n"), "", $sql);
+            $sql = str_replace("    ", " ", $sql);
+            $sql = explode(";", $sql);
+        }
+        foreach($sql as $q) {
+            if (!empty($q)) {
+                $this->_query($q, array());
+            }
+        }
     }
 
     /**
