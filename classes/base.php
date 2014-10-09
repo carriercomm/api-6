@@ -25,7 +25,7 @@
             // execute schema.sql and tokens.sql if the tables do not exist
             $this->db->_query("SHOW TABLES LIKE 'peq_admin'");
             if ($this->db->GetNumberOfRows() < 1) {
-                $sql = file_get_contents("sql/schema.sql");
+                $sql = file_get_contents("sql/schema.sql") . file_get_contents("sql/tokens.sql");
                 $this->db->BatchQuery($sql);
             } else {
                 $this->db->_query("SHOW TABLES LIKE 'login_tokens'");
