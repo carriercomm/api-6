@@ -5,8 +5,8 @@
 
     class spawn extends base {
         var $db;
-        function spawn() {
-            parent::base();
+        function spawn($Token) {
+            parent::base($Token);
         }
 
         //

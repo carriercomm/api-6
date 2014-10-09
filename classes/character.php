@@ -5,8 +5,8 @@
 
     class character extends base {
         var $db;
-        function character() {
-            parent::base();
+        function character($Token) {
+            parent::base($Token);
         }
 
         //

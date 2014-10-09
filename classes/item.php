@@ -5,8 +5,8 @@
 
 	class item extends base {
 		var $db;
-		function item() {
-			parent::base();
+		function item($Token) {
+			parent::base($Token);
 		}
 
 		//

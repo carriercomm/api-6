@@ -4,9 +4,10 @@
 
     class base {
         var $db;
-        function base() {
+        function base($Token) {
+            $db = $Token->getDBInfo();
             require_once "lib/Mysql.class.php";
-            $this->db = new MySQL(array('host' => 'localhost', 'username' => 'root', 'password' => 'fake10', 'database' => 'eq'));
+            $this->db = new MySQL(array('host' => $db['server'], 'username' => $db['username'], 'password' => $db['password'], 'database' => $db['database']));
             $this->verifyTableStructure();
         }
 
@@ -22,17 +23,11 @@
                 $this->db->BatchQuery($sql);
             }
 
-            // execute schema.sql and tokens.sql if the tables do not exist
+            // execute schema.sql if the table does not exist
             $this->db->_query("SHOW TABLES LIKE 'peq_admin'");
             if ($this->db->GetNumberOfRows() < 1) {
-                $sql = file_get_contents("sql/schema.sql") . file_get_contents("sql/tokens.sql");
+                $sql = file_get_contents("sql/schema.sql");
                 $this->db->BatchQuery($sql);
-            } else {
-                $this->db->_query("SHOW TABLES LIKE 'login_tokens'");
-                if ($this->db->GetNumberOfRows() < 1) {
-                    $sql = file_get_contents("sql/tokens.sql");
-                    $this->db->BatchQuery($sql);
-                }
             }
         }
 

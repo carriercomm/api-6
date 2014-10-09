@@ -5,8 +5,8 @@
 
 	class npc extends base {
 		var $db;
-		function npc() {
-			parent::base();
+		function npc($Token) {
+			parent::base($Token);
 		}
 
 		//
