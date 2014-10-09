@@ -6,7 +6,7 @@
     class spell extends base {
         var $db;
         function spell() {
-            parent::Base();
+            parent::base();
         }
 
         //

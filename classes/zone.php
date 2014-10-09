@@ -6,7 +6,7 @@
     class zone extends base {
         var $db;
         function zone() {
-            parent::Base();
+            parent::base();
         }
 
         //

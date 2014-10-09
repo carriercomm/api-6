@@ -6,7 +6,7 @@
 	class item extends base {
 		var $db;
 		function item() {
-			parent::Base();
+			parent::base();
 		}
 
 		//

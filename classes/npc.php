@@ -6,7 +6,7 @@
 	class npc extends base {
 		var $db;
 		function npc() {
-			parent::Base();
+			parent::base();
 		}
 
 		//

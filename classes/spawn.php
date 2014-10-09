@@ -6,7 +6,7 @@
     class spawn extends base {
         var $db;
         function spawn() {
-            parent::Base();
+            parent::base();
         }
 
         //

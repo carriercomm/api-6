@@ -6,7 +6,7 @@
     class faction extends base {
         var $db;
         function faction() {
-            parent::Base();
+            parent::base();
         }
 
         //
