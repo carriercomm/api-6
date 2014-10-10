@@ -1,12 +1,14 @@
 <?php
 
-    error_reporting(E_ALL);
+    error_reporting(E_ERROR);
     ini_set('display_errors', '1');
 
     class zone extends base {
         var $db;
-        function zone($Token) {
-            parent::base($Token);
+        var $callback;
+        function zone($Token, $callback) {
+            $this->callback = $callback;
+            parent::base($Token, $callback);
         }
 
         //
@@ -52,7 +54,7 @@
             $zones = $this->processForApi($zones);
 
             $this->outputHeaders();
-            echo json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "results" => $zones));
+            echo $this->callback . "(" . json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "results" => $zones)) . ");";
         }
 
         function npcs($params = null) {

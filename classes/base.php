@@ -1,10 +1,12 @@
 <?
-    error_reporting(E_ALL);
-    ini_set('display_errors', '1');
+    //error_reporting(E_ERROR);
+    //ini_set('display_errors', '1');
 
     class base {
         var $db;
-        function base($Token) {
+        var $callback;
+        function base($Token, $callback) {
+            $this->callback = $callback;
             $db = $Token->getDBInfo();
             require_once "lib/Mysql.class.php";
             $this->db = new MySQL(array('host' => $db['server'], 'username' => $db['username'], 'password' => $db['password'], 'database' => $db['database']));

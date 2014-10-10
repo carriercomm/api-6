@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS `login_tokens`;
 
-CREATE TABLE login_tokens (
+CREATE TABLE db_tokens (
     token varchar(255) NOT NULL,
     db_server varchar(30) NOT NULL,
     db_username varchar(30) NOT NULL,
@@ -11,4 +11,4 @@ CREATE TABLE login_tokens (
     row_update_dt timestamp NOT NULL
 );
 
-ALTER TABLE login_tokens ADD INDEX (token), ADD INDEX (db_server);
+ALTER TABLE db_tokens ADD INDEX (token), ADD INDEX (db_server);

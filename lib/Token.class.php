@@ -15,32 +15,41 @@
         //  Executes all the needed SQL from the /sql folder if it's required
         //
         function verifyTableStructure() {
-            $this->db->_query("SHOW TABLES LIKE 'login_tokens'");
+            $this->db->_query("SHOW TABLES LIKE 'db_tokens'");
             if ($this->db->GetNumberOfRows() < 1) {
                 $sql = file_get_contents("sql/tokens.sql");
                 $this->db->BatchQuery($sql);
             }
         }
 
-        function validate($headers) {
-            $token = (!empty($headers['X-Auth-Token'])) ? $headers['X-Auth-Token'] : false;
-            $token = "11111111111111";
+        function validate($post) {
+            $token = (!empty($post['token'])) ? $post['token'] : false;
             if (!$token) {
                 return false;
             } else {
-                $this->token = $token;
+                $valid = $this->db->QueryFetchSingleValue("SELECT token FROM db_tokens WHERE token = :token AND NOW() < expires", array("token" => $token));
+                if ($valid) {
+                    $this->token = $token;
+                } else {
+                    return false;
+                }
             }
             return true;
         }
 
-        function getDBInfo() {
-            // db query to get database info from $this->token
-            return array(
-                "server" => "localhost",
-                "username" => "root",
-                "password" => "fake10",
-                "database" => "eq"
-            );
+        function getDBInfo($post) {
+            $token = (!empty($post['token'])) ? $post['token'] : false;
+            $data = $this->db->QueryFetchRow("SELECT * FROM db_tokens WHERE token = :token", array("token" => $token));
+            if ($data) {
+                return array(
+                    "server" => $data['db_server'],
+                    "username" => $data['db_username'],
+                    "password" => $data['db_password'],
+                    "database" => $data['db_database']
+                );
+            } else {
+                return false;
+            }
         }
     }
 
