@@ -21,14 +21,14 @@
             $username = (!empty($post['username'])) ? $post['username']: false;
             $password = (!empty($post['password'])) ? $post['password']: false;
             $database = (!empty($post['database'])) ? $post['database']: false;
-
+            
             if ($server && $username && $password && $database) {
                 $token = md5($server . "|" . $username . "|" . $password . "|" . $database . "|" . date("c", strtotime("now")));
                 $this->db->Insert("db_tokens", array(
                     "token" => $token,
                     "db_server" => $server,
                     "db_username" => $username,
-                    "db_password" => $password,
+                    "db_password" => Encryption::Encrypt(ENCRYPT_DEFAULT_ALGORITHM, $password),
                     "db_database" => $database,
                     "row_insert_dt" => "NOW()",
                     "expires" => "DATE_ADD(NOW(), INTERVAL 30 DAY)"

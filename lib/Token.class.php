@@ -44,7 +44,7 @@
                 return array(
                     "server" => $data['db_server'],
                     "username" => $data['db_username'],
-                    "password" => $data['db_password'],
+                    "password" => Encryption::Decrypt(ENCRYPT_DEFAULT_ALGORITHM, $data['db_password']),
                     "database" => $data['db_database']
                 );
             } else {

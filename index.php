@@ -7,6 +7,7 @@
     require_once "lib/Util.class.php";
     //require_once "lib/Static.data.php";
     require_once "lib/Compat.php";
+    require_once "lib/Encryption.class.php";
 
     $p = $Util->parseUri($_SERVER['REQUEST_URI']);
     if (!$p) {
@@ -40,6 +41,8 @@
                     $Util->output(array("data" => array("token" => $token)));
                 }
                 break;
+            case "verifytoken":
+                $Util->output(array());
             case "login":
                 // needs eqemu db info to access peq_admin table
                 $auth->setEqemuDb($eqemu_db_info);
