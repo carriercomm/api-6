@@ -20,7 +20,7 @@
     require_once "lib/Token.class.php";
     $valid = $Token->validate($_POST);
     if (!$valid) {
-        if ($p['module'] != "auth" || ($p['module'] == "auth" && $p['action'] != "getToken")) {
+        if ($p['module'] != "auth" || ($p['module'] == "auth" && $p['action'] != "getToken" && $p['action'] != "getTokenData")) {
             $Util->output(array("error" => "Invalid Token"));
         }
     } else {
@@ -39,6 +39,14 @@
                     $Util->output(array("error" => "Token generation failed"));
                 } else {
                     $Util->output(array("data" => array("token" => $token)));
+                }
+                break;
+            case "getTokenData":
+                $data = $auth->getTokenData($_POST['tokens']);
+                if (!$data) {
+                    $Util->output(array("error" => "Failed to retrieve database details"));
+                } else {
+                    $Util->output(array("data" => $data));
                 }
                 break;
             case "verifytoken":

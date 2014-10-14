@@ -38,6 +38,27 @@
             return false;
         }
 
+        function getTokenData($tokens) {
+            $results = array();
+            $tokens = explode(",", $tokens);
+            $tokenData = $this->db->QueryFetchAssoc("SELECT * FROM db_tokens WHERE token IN ('" . implode("','", $tokens) . "')");
+            if ($tokenData) {
+                foreach($tokenData as $token) {
+                    $results[] = array(
+                        "token" => $token['token'],
+                        "server" => $token['db_server'],
+                        "username" => $token['db_username'],
+                        "database" => $token['db_database']
+                    );
+                }
+            }
+            if (count($results) > 0) {
+                return $results;
+            } else {
+                return false;
+            }
+        }
+
         function validateLogin($post) {
             $user = (!empty($post['user'])) ? $post['user'] : false;
             $password = (!empty($post['password'])) ? $post['password'] : false;
