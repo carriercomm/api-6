@@ -25,9 +25,13 @@
                     }
                 }
             }
-
-            if (!empty($params[0])) {
-                $search = str_replace(" ", "%", urldecode(reset($params)));
+            
+            if (!empty($options['query'])) {
+                $search = $options['query'];
+            } else {
+                if (!empty($params[0])) {
+                    $search = str_replace(" ", "%", urldecode(reset($params)));
+                }
             }
             
             if (is_numeric($search)) {
