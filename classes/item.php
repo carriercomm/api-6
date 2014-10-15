@@ -95,7 +95,15 @@
             global $itemtypes;
 
             foreach ($items as $key => $item) {
-                $items[$key]['typeName'] = $itemtypes[$item['itemtype']];
+                if ($item['itemtype'] == 0) {
+                    if ($item['damage'] < 1) {
+                        $items[$key]['typeName'] = $item['itemtype'] . ": " . "Misc";
+                    } else {
+                        $items[$key]['typeName'] = $item['itemtype'] . ": " . $itemtypes[$item['itemtype']];
+                    }
+                } else {
+                    $items[$key]['typeName'] = $item['itemtype'] . ": " . $itemtypes[$item['itemtype']];
+                }
             }
 
             return $items;

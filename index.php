@@ -5,7 +5,7 @@
 
     require_once "config.php";
     require_once "lib/Util.class.php";
-    //require_once "lib/Static.data.php";
+    require_once "lib/Static.data.php";
     require_once "lib/Compat.php";
     require_once "lib/Encryption.class.php";
 
