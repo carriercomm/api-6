@@ -5,9 +5,11 @@
     class base {
         var $db;
         var $callback;
-        function base($Token, $callback) {
+        var $post;
+        function base($Token, $callback, $post) {
             $this->callback = $callback;
-            $db = $Token->getDBInfo();
+            $this->post = $post;
+            $db = $Token->getDBInfo($this->post);
             require_once "lib/Mysql.class.php";
             $this->db = new MySQL(array('host' => $db['server'], 'username' => $db['username'], 'password' => $db['password'], 'database' => $db['database']));
             $this->verifyTableStructure();

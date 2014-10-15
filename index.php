@@ -65,21 +65,22 @@
     } else {
         if (file_exists("classes/" . $p['module'] . ".php") ){
             require_once "classes/" . $p['module'] . ".php";
+
             if (!$p['module'] || !class_exists($p['module'])) {
-                $Util->outputError("Class '" . $p['module'] . "' does not exist.");
+                $Util->output(array("error" => "Class '" . $p['module'] . "' does not exist."));
             }
 
-            $module = new $p['module']($Token, $callback);
+            $module = new $p['module']($Token, $callback, $_POST);
 
             if (!$p['action'] || !method_exists($module, $p['action'])) {
                 if (!method_exists($module, "index")) {
-                    $Util->outputError("Action '" . $p['action'] . "' does not exist and there is no 'index' action in the '" . $p['module'] . "' module.");
+                    $Util->output(array("error" => "Action '" . $p['action'] . "' does not exist and there is no 'index' action in the '" . $p['module'] . "' module."));
                 }
             }
 
             $module->{$p['action']}($p['params'], $_POST);
         } else {
-            $Util->outputError("Module '" . $p['module'] . "' does not exist.");
+            $Util->output(array("error" => "Module '" . $p['module'] . "' does not exist."));
         }
     }
 
