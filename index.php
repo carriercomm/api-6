@@ -1,13 +1,14 @@
 <?php
 
     error_reporting(E_ALL);
-    ini_set('display_errors', '1');
+    ini_set('display_errors', 1);
 
     require_once "config.php";
     require_once "lib/Util.class.php";
     require_once "lib/Static.data.php";
     require_once "lib/Compat.php";
     require_once "lib/Encryption.class.php";
+    require_once 'lib/Encode.class.php';
 
     $p = $Util->parseUri($_SERVER['REQUEST_URI']);
     if (!$p) {
