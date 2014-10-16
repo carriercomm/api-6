@@ -36,7 +36,7 @@
             
             if (is_numeric($search)) {
                 // numeric, search by id
-                $items = array($this->getItemById($search, false));
+                $items = array($this->getItemById($search, $columns, false));
                 $count = count($items);
             } elseif (!empty($search)) {
                 // search by name
@@ -87,11 +87,11 @@
         //
         // Get item by id, used by both search methods
         //
-        function getItemById($id, $verbose = null) {
+        function getItemById($id, $columns, $verbose = null) {
             if ($verbose) {
-                return $this->db->QueryFetchRow("SELECT i.* FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
+                return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
             } else {
-                return $this->db->QueryFetchRow("SELECT i.id, i.name, i.icon, i.itemtype, i.nodrop, i.norent, i.weight FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
+                return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
             }
         }
 
@@ -101,12 +101,15 @@
             foreach ($items as $key => $item) {
                 if ($item['itemtype'] == 0) {
                     if ($item['damage'] < 1) {
-                        $items[$key]['typeName'] = $item['itemtype'] . ": " . "Misc";
+                        $items[$key]['typeName'] = "Misc";
                     } else {
-                        $items[$key]['typeName'] = $item['itemtype'] . ": " . $itemtypes[$item['itemtype']];
+                        $items[$key]['typeName'] = $itemtypes[$item['itemtype']];
                     }
                 } else {
-                    $items[$key]['typeName'] = $item['itemtype'] . ": " . $itemtypes[$item['itemtype']];
+                    $items[$key]['typeName'] = $itemtypes[$item['itemtype']];
+                }
+                if (!empty($item['icon'])) {
+                    $items[$key]['iconUrl'] = "http://everquest.allakhazam.com/pgfx/item_" . $item['icon'] . ".png";
                 }
             }
 
