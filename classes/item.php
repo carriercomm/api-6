@@ -16,7 +16,12 @@
         //
         function search($params = null, $options = null) {
             // options will contain params such as limit and columns
-            $limit = (property_exists($options, 'limit') && $options->limit > 0) ? " LIMIT " . $options->limit : ((property_exists($options, 'limit') && $options->limit === 0) ? "" : " LIMIT 175");
+            $limit = $this->paginate($options['limit'], $options['page']);
+            $default_sort = array(
+                "property" => "itemtype", 
+                "direction" => "ASC"
+            );
+            $sort = $this->sort((array)reset(json_decode($options['sort'])), $default_sort);
             $columns = (!empty($options->columns)) ? $options->columns : array('i.*');
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -26,7 +31,7 @@
                 }
             }
             
-            if (!empty($options['query'])) {
+            if (!empty(trim($options['query']))) {
                 $search = $options['query'];
             } else {
                 if (!empty($params[0])) {
@@ -41,17 +46,17 @@
             } elseif (!empty($search)) {
                 // search by name
                 $params = array("name" => strtolower($search));
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i WHERE LOWER(name) LIKE '%:name%' ORDER BY name ASC", $params);
-                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i WHERE LOWER(name) LIKE '%:name%' ORDER BY name ASC" . $limit, $params);
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i WHERE LOWER(name) LIKE '%:name%'" . $sort, $params);
+                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i WHERE LOWER(name) LIKE '%:name%'" . $sort . $limit, $params);
             } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i ORDER BY name ASC");
-                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i ORDER BY name ASC" . $limit);
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i" . $sort);
+                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i" . $sort . $limit);
             }
 
             $items = $this->processForApi($items);
 
             $this->outputHeaders();
-            echo $this->callback . "(" . json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "data" => $items)) . ");";
+            echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $items)) . ");";
         }
 
         //
@@ -96,9 +101,10 @@
         }
 
         function processForApi($items) {
-            global $itemtypes;
+            global $itemtypes, $world_containers;
 
             foreach ($items as $key => $item) {
+                // account for shitty database and non-weapons with type 0 are now Misc not 1HS
                 if ($item['itemtype'] == 0) {
                     if ($item['damage'] < 1) {
                         $items[$key]['typeName'] = "Misc";
@@ -108,9 +114,19 @@
                 } else {
                     $items[$key]['typeName'] = $itemtypes[$item['itemtype']];
                 }
+
+                // icon
                 if (!empty($item['icon'])) {
                     $items[$key]['iconUrl'] = "http://everquest.allakhazam.com/pgfx/item_" . $item['icon'] . ".png";
                 }
+
+                if ($item['bagsize'] > 0 && $item['bagslots'] > 0) {
+                    $items[$key]['container'] = 1;
+                } else {
+                    $items[$key]['container'] = 0;
+                }
+
+                $items[$key]['bagTypeName'] = $world_containers[$item['bagtype']];
             }
 
             return $items;

@@ -64,6 +64,52 @@
             header('Access-Control-Allow-Methods: PUT, GET, POST, DELETE, OPTIONS');
             header('Access-Control-Allow-Headers: X-Auth-Token, Content-Type, Accept');
         }
+
+        public function paginate($limit, $page) {
+            $limit = (!empty($limit)) ? $limit : 100;
+            $start = ($page == 1) ? (($page - 1) * $limit) : (($page - 1) * $limit) + 1;
+            return "LIMIT " . $start . ", " . $limit;
+        }
+
+        public function sort($sort, $default) {
+            if (!empty($sort)) {
+                return " ORDER BY " . $sort['property'] . " " . $sort['direction'] . " ";
+            } else {
+                return " ORDER BY " . $default['property'] . " " . $default['direction'] . " ";
+            }
+        }
+
+        public function find($search, $fields, $static) {
+            if ((!empty($search) && !empty($fields)) || !empty($static)) {
+                if (count($fields) > 0) {
+                    $where = "WHERE (";
+                    $conditions = array();
+                    foreach ($fields as $field) {
+                        $conditions[] = $field . " LIKE '%" . $search . "%'";
+                    }
+                    $where .= implode(" OR ", $conditions) . ") ";
+                    if (!empty($static) && count($static) > 0) {
+                        $wconditions = array();
+                        foreach ($static as $value) {
+                            $wconditions[] = $value;
+                        }
+                        $where .= "AND (" . implode(" AND ", $wconditions) . ") ";
+                    }
+                    return $where;
+                } else {
+                    if (!empty($static) && count($static) > 0) {
+                        $where = "WHERE (";
+                        $wconditions = array();
+                        foreach ($static as $value) {
+                            $wconditions[] = $value;
+                        }
+                        $where .= implode(" AND ", $wconditions) . ") ";
+                    }
+                    return $where;
+                }
+            }
+            return "";
+        }
     }
 
 ?>
