@@ -101,16 +101,6 @@
         }
 
         function processForApi($items) {
-            global $itemtypes, $world_containers;
-
-            foreach ($items as $key => $item) {
-                if ($item['bagsize'] > 0 && $item['bagslots'] > 0) {
-                    $items[$key]['container'] = 1;
-                } else {
-                    $items[$key]['container'] = 0;
-                }
-            }
-
             return $items;
         }
     }
