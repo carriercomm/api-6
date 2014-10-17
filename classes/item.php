@@ -104,11 +104,6 @@
             global $itemtypes, $world_containers;
 
             foreach ($items as $key => $item) {
-                // icon
-                if (!empty($item['icon'])) {
-                    $items[$key]['iconUrl'] = "http://everquest.allakhazam.com/pgfx/item_" . $item['icon'] . ".png";
-                }
-
                 if ($item['bagsize'] > 0 && $item['bagslots'] > 0) {
                     $items[$key]['container'] = 1;
                 } else {
