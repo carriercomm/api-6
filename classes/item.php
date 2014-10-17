@@ -40,7 +40,7 @@
             
             if (is_numeric($search)) {
                 // numeric, search by id
-                $items = array($this->getItemById($search, $columns, false));
+                $items = array($this->getItemById($search, $columns));
                 $count = 1;
             } elseif (!empty($search)) {
                 // search by name

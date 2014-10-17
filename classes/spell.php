@@ -5,24 +5,29 @@
 
     class spell extends base {
         var $db;
-        function spell($Token) {
-            parent::base($Token);
+        var $callback;
+        function spell($Token, $callback, $post) {
+            $this->callback = $callback;
+            parent::base($Token, $callback, $post);
         }
 
         //
         // Searches spell table with minimal info returned
         //
-        function search($params = null, $options) {
-            // options will contain params such as limit and columns
-            $limit = (property_exists($options, 'limit') && $options->limit > 0) ? " LIMIT " . $options->limit : ((property_exists($options, 'limit') && $options->limit === 0) ? "" : " LIMIT 75");
+        function search($params = null, $options = null) {
+            $limit = $this->paginate($options['limit'], $options['page']);
+            $default_sort = array(
+                "property" => "name", 
+                "direction" => "ASC"
+            );
+            $sort = $this->sort((array)reset(json_decode($options['sort'])), $default_sort);
             $columns = (!empty($options->columns)) ? $options->columns : array('s.*');
-            $invalid = $this->findInvalidColumns($columns, 'spells_new');
-
+            /*$invalid = $this->findInvalidColumns($columns, 'spells_new');
             if (count($invalid) > 0) {
                 $this->outputHeaders();
                 echo json_encode(array("error" => "The following are invalid columns: " . implode(", ", $invalid)));
                 die();
-            }
+            }*/
 
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -32,25 +37,33 @@
                 }
             }
 
-            $search = str_replace(" ", "%", urldecode(reset($params)));
+            if (!empty(trim($options['query']))) {
+                $search = $options['query'];
+            } else {
+                if (!empty($params[0])) {
+                    $search = str_replace(" ", "%", urldecode(reset($params)));
+                }
+            }
+            
             if (is_numeric($search)) {
                 // numeric, search by id
                 $spells = array($this->getSpellById($search, false));
                 $count = count($spells);
             } elseif (!empty($search)) {
                 // search by name
-                $params = array("name" => strtolower($search));
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(s.id) FROM spells_new s WHERE LOWER(s.name) LIKE '%:name%'", $params);
-                $spells = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM spells_new s WHERE LOWER(s.name) LIKE '%:name%' ORDER BY s.name ASC" . $limit, $params);
+                $where = $this->find(strtolower($search), array("LOWER(s.name)"));
+
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(s.id) FROM spells_new s " . $where . $sort);
+                $spells = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM spells_new s " . $where . $sort . $limit);
             } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(s.id) FROM spells_new s WHERE s.name != ''");
-                $spells = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM spells_new s WHERE s.name != '' ORDER BY s.name ASC" . $limit);
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(s.id) FROM spells_new s WHERE s.name != ''" . $sort);
+                $spells = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM spells_new s WHERE s.name != ''" . $sort . $limit);
             }
 
             $spells = $this->processForApi($spells);
 
             $this->outputHeaders();
-            echo json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "results" => $spells));
+            echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $spells)) . ");";
         }
 
         //
@@ -114,12 +127,8 @@
         //
         // Get spell by id, used by both search methods
         //
-        function getSpellById($id, $verbose = null) {
-            if ($verbose) {
-                return $this->db->QueryFetchRow("SELECT s.* FROM spells_new s WHERE s.id = :id LIMIT 1", array("id" => $id));
-            } else {
-                return $this->db->QueryFetchRow("SELECT s.id, s.name, s.range, s.cast_time, s.mana, s.icon, s.new_icon, s.memicon, s.skill, s.zonetype, s.nodispell, s.spellgroup FROM spells_new s WHERE s.id = :id LIMIT 1", array("id" => $id));
-            }
+        function getSpellById($id, $columns) {
+            return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM spells_new s WHERE s.id = :id LIMIT 1", array("id" => $id));
         }
 
         function processForApi($spells) {
