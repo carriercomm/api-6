@@ -104,17 +104,6 @@
             global $itemtypes, $world_containers;
 
             foreach ($items as $key => $item) {
-                // account for shitty database and non-weapons with type 0 are now Misc not 1HS
-                if ($item['itemtype'] == 0) {
-                    if ($item['damage'] < 1) {
-                        $items[$key]['typeName'] = "Misc";
-                    } else {
-                        $items[$key]['typeName'] = $itemtypes[$item['itemtype']];
-                    }
-                } else {
-                    $items[$key]['typeName'] = $itemtypes[$item['itemtype']];
-                }
-
                 // icon
                 if (!empty($item['icon'])) {
                     $items[$key]['iconUrl'] = "http://everquest.allakhazam.com/pgfx/item_" . $item['icon'] . ".png";
@@ -125,8 +114,6 @@
                 } else {
                     $items[$key]['container'] = 0;
                 }
-
-                $items[$key]['bagTypeName'] = $world_containers[$item['bagtype']];
             }
 
             return $items;
