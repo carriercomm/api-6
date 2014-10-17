@@ -42,12 +42,13 @@
             if (is_numeric($search)) {
                 // numeric, search by id
                 $items = array($this->getItemById($search, $columns, false));
-                $count = count($items);
+                $count = 1;
             } elseif (!empty($search)) {
                 // search by name
-                $params = array("name" => strtolower($search));
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i WHERE LOWER(name) LIKE '%:name%'" . $sort, $params);
-                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i WHERE LOWER(name) LIKE '%:name%'" . $sort . $limit, $params);
+                $where = $this->find(strtolower($search), array("LOWER(Name)"));
+
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i " . $where . $sort);
+                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i " . $where . $sort . $limit);
             } else {
                 $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i" . $sort);
                 $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i" . $sort . $limit);
@@ -93,11 +94,7 @@
         // Get item by id, used by both search methods
         //
         function getItemById($id, $columns, $verbose = null) {
-            if ($verbose) {
-                return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
-            } else {
-                return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
-            }
+            return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
         }
 
         function processForApi($items) {

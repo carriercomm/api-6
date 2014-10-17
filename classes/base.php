@@ -85,7 +85,7 @@
                     $where = "WHERE (";
                     $conditions = array();
                     foreach ($fields as $field) {
-                        $conditions[] = $field . " LIKE '%" . $search . "%'";
+                        $conditions[] = $field . " LIKE '%" . mysql_real_escape_string($search) . "%'";
                     }
                     $where .= implode(" OR ", $conditions) . ") ";
                     if (!empty($static) && count($static) > 0) {
