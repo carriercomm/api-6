@@ -15,10 +15,9 @@
         // Searches item table with minimal info returned
         //
         function search($params = null, $options = null) {
-            // options will contain params such as limit and columns
             $limit = $this->paginate($options['limit'], $options['page']);
             $default_sort = array(
-                "property" => "itemtype", 
+                "property" => "Name", 
                 "direction" => "ASC"
             );
             $sort = $this->sort((array)reset(json_decode($options['sort'])), $default_sort);
@@ -93,7 +92,7 @@
         //
         // Get item by id, used by both search methods
         //
-        function getItemById($id, $columns, $verbose = null) {
+        function getItemById($id, $columns) {
             return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM items i WHERE i.id = :id LIMIT 1", array("id" => $id));
         }
 
