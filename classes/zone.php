@@ -47,7 +47,7 @@
 
             if (is_numeric($search)) {
                 // numeric, search by id
-                $zones = array($this->getZonesById($search, $columns));
+                $zones = $this->getZonesById($search, $columns);
                 $count = count($zones);
             } elseif (!empty($search)) {
                 // search by name
