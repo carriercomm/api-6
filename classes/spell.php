@@ -69,10 +69,17 @@
         //
         // Searches spell sets
         //
-        function searchspellsets($params = null, $options) {
-            $this->outputHeaders();
-            // options will contain params such as limit and columns
-            $limit = (property_exists($options, 'limit') && $options->limit > 0) ? " LIMIT " . $options->limit : ((property_exists($options, 'limit') && $options->limit === 0) ? "" : " LIMIT 75");
+        function searchspellsets($params = null, $options = null) {
+            $limit = $this->paginate($options['limit'], $options['page']);
+            $default_sort = array(
+                "property" => "ns.name", 
+                "direction" => "DESC"
+            );
+            if (strpos($options['sort']['property'], ".") === false) {
+                $options['sort']['property'] = "ns." . $options['sort']['property'];
+            }
+            $sort = $this->sort((array)reset(json_decode($options['sort'])), $default_sort);
+            $group = $this->group("ns.id");
             $columns = (!empty($options->columns)) ? $options->columns : array('ns.*');
 
             if ($columns) {
@@ -83,21 +90,29 @@
                 }
             }
 
-            $search = str_replace(" ", "%", urldecode(reset($params)));
+            if (!empty(trim($options['query']))) {
+                $search = $options['query'];
+            } else {
+                if (!empty($params[0])) {
+                    $search = str_replace(" ", "%", urldecode(reset($params)));
+                }
+            }
+
             if (!empty($search)) {
                 // search by name
-                $params = array("name" => strtolower($search));
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE LOWER(s.name) LIKE '%:name%'", $params);
-                $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE LOWER(s.name) LIKE '%:name%' GROUP BY ns.id ORDER BY ns.name ASC" . $limit, $params);
+                $where = $this->find(strtolower($search), array("LOWER(s.name)", "LOWER(ns.name)"));
+
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $sort);
+                $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $group . $sort . $limit);
             } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id)");
-                $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) GROUP BY ns.id ORDER BY ns.name ASC" . $limit, $params);
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id)" . $sort);
+                $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id)" . $group . $sort . $limit);
             }
 
             $spellsets = $this->processSpellsetsForApi($spellsets, $search);
 
             $this->outputHeaders();
-            echo json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "results" => $spellsets));
+            echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $spellsets)) . ");";
         }
 
         //
@@ -143,10 +158,18 @@
         }
 
         function processSpellsetsForApi($spellsets, $search) {
-            foreach ($spellsets as $key => $spellset) {
-                $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE LOWER(s.name) LIKE '%:name%' AND nse.npc_spells_id = :spellset_id", array("name" => $search, "spellset_id" => $spellset['id']));
-                $spellsets[$key]['spells'] = implode(", ", $spells);
+            if (!empty($search)) {
+                foreach ($spellsets as $key => $spellset) {
+                    $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE LOWER(s.name) LIKE '%:name%' AND nse.npc_spells_id = :spellset_id", array("name" => $search, "spellset_id" => $spellset['id']));
+                    $spellsets[$key]['spells'] = implode(", ", $spells);
+                }
+            } else {
+                foreach ($spellsets as $key => $spellset) {
+                    $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE nse.npc_spells_id = :spellset_id", array("spellset_id" => $spellset['id']));
+                    $spellsets[$key]['spells'] = implode(", ", $spells);
+                }
             }
+            
             return $spellsets;
         }
     }
