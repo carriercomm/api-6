@@ -109,7 +109,7 @@
                 $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id)" . $group . $sort . $limit);
             }
 
-            $spellsets = $this->processSpellsetsForApi($spellsets, $search);
+            $spellsets = $this->processSpellsetsForApi($spellsets);
 
             $this->outputHeaders();
             echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $spellsets)) . ");";
@@ -157,17 +157,10 @@
             return $spells;
         }
 
-        function processSpellsetsForApi($spellsets, $search) {
-            if (!empty($search)) {
-                foreach ($spellsets as $key => $spellset) {
-                    $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE LOWER(s.name) LIKE '%:name%' AND nse.npc_spells_id = :spellset_id", array("name" => $search, "spellset_id" => $spellset['id']));
-                    $spellsets[$key]['spells'] = implode(", ", $spells);
-                }
-            } else {
-                foreach ($spellsets as $key => $spellset) {
-                    $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE nse.npc_spells_id = :spellset_id", array("spellset_id" => $spellset['id']));
-                    $spellsets[$key]['spells'] = implode(", ", $spells);
-                }
+        function processSpellsetsForApi($spellsets) {
+            foreach ($spellsets as $key => $spellset) {
+                $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE nse.npc_spells_id = :spellset_id", array("spellset_id" => $spellset['id']));
+                $spellsets[$key]['spells'] = implode(", ", $spells);
             }
             
             return $spellsets;
