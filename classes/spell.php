@@ -161,6 +161,33 @@
             foreach ($spellsets as $key => $spellset) {
                 $spells = $this->db->QueryFetchColumn("SELECT s.name FROM npc_spells_entries nse LEFT JOIN spells_new s ON (nse.spellid = s.id) WHERE nse.npc_spells_id = :spellset_id", array("spellset_id" => $spellset['id']));
                 $spellsets[$key]['spells'] = implode(", ", $spells);
+
+                if ((int)$spellset['attack_proc'] > 0) {
+                    $spellName = $this->db->QueryFetchSingleValue("SELECT name FROM spells_new WHERE id = :id", array("id" => $spellset['attack_proc']));
+                    if ($spellName) {
+                        $spellsets[$key]['attackProcSpell'] = $spellName;
+                    }
+                } else {
+                    $spellsets[$key]['attackProcSpell'] = "None";
+                }
+
+                if ((int)$spellset['range_proc'] > 0) {
+                    $spellName = $this->db->QueryFetchSingleValue("SELECT name FROM spells_new WHERE id = :id", array("id" => $spellset['range_proc']));
+                    if ($spellName) {
+                        $spellsets[$key]['rangeProcSpell'] = $spellName;
+                    }
+                } else {
+                    $spellsets[$key]['rangeProcSpell'] = "None";
+                }
+
+                if ((int)$spellset['defensive_proc'] > 0) {
+                    $spellName = $this->db->QueryFetchSingleValue("SELECT name FROM spells_new WHERE id = :id", array("id" => $spellset['defensive_proc']));
+                    if ($spellName) {
+                        $spellsets[$key]['defensiveProcSpell'] = $spellName;
+                    }
+                } else {
+                    $spellsets[$key]['defensiveProcSpell'] = "None";
+                }
             }
             
             return $spellsets;
