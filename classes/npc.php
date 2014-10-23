@@ -5,25 +5,37 @@
 
 	class npc extends base {
 		var $db;
-		function npc($Token) {
-			parent::base($Token);
+		var $callback;
+		function npc($Token, $callback, $post) {
+			$this->callback = $callback;
+            parent::base($Token, $callback, $post);
 		}
 
 		//
 		// Searches npc_types table
 		//
-		function search($params = null, $options) {
+		function search($params = null, $options = null) {
 			// options will contain params such as limit and columns
-			$group = (property_exists($options, 'group') && $options->group) ? true : false;
-            $limit = (property_exists($options, 'limit') && $options->limit > 0) ? " LIMIT " . $options->limit : ((property_exists($options, 'limit') && $options->limit === 0) ? "" : " LIMIT 75");
+			$limit = $this->paginate($options['limit'], $options['page']);
+            $default_sort = array(
+                "property" => "name", 
+                "direction" => "ASC"
+            );
+            $options['sort'] = (array)reset(json_decode($options['sort']));
+            if (strpos($options['sort']['property'], ".") === false) {
+                $options['sort']['property'] = "n." . $options['sort']['property'];
+            }
+            if ($options['sort']['property'] == 'n.name') {
+            	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
+            }
+            $sort = $this->sort($options['sort'], $default_sort);
             $columns = (!empty($options->columns)) ? $options->columns : array('n.*');
-            $invalid = $this->findInvalidColumns($columns, 'npc_types');
-
+            /*$invalid = $this->findInvalidColumns($columns, 'npc_types');
             if (count($invalid) > 0) {
                 $this->outputHeaders();
                 echo json_encode(array("error" => "The following are invalid columns: " . implode(", ", $invalid)));
                 die();
-            }
+            }*/
 
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -33,19 +45,27 @@
                 }
             }
 
-			$search = str_replace(" ", "%", urldecode(reset($params)));
+			if (!empty(trim($options['query']))) {
+                $search = $options['query'];
+            } else {
+                if (!empty($params[0])) {
+                    $search = str_replace(" ", "%", urldecode(reset($params)));
+                }
+            }
+
 			if (is_numeric($search)) {
 				// numeric, search by id
 				$npcs = array($this->getNpcById($search, false));
 				$count = count($npcs);
 			} elseif (!empty($search)) {
 				// search by name
-				$params = array("name" => strtolower($search));
-				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n WHERE LOWER(n.name) LIKE '%:name%'", $params);
-				$npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n WHERE LOWER(n.name) LIKE '%:name%' ORDER BY LOWER(REPLACE(n.name, '#', '')) ASC" . $limit, $params);
+				$where = $this->find(strtolower($search), array("LOWER(n.name)"));
+
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n " . $where . $sort);
+                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n " . $where . $sort . $limit);
 			} else {
-				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n");
-				$npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n ORDER BY LOWER(REPLACE(n.name, '#', '')) ASC" . $limit);
+				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n" . $sort);
+                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n" . $sort . $limit);
 			}
 			
 			$npcs = $this->processForApi($npcs);
@@ -54,7 +74,7 @@
 			}
 
 			$this->outputHeaders();
-			echo json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "results" => $npcs));
+			echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $npcs)) . ");";
 		}
 
 		function searchmerchants($params = null, $options) {
@@ -218,7 +238,7 @@
 				$npc_name = preg_replace("/\d+$/", "", trim(str_replace("#", "", str_replace("_", " ", $npc['name']))));
 				$npcs[$key]['firstname'] = preg_replace("/\d+$/", "", trim(str_replace("#", "", str_replace("_", " ", $npc['name']))));
 				if (empty($npc_name)) {
-					$npcs[$key]['name'] = "Nameless";
+					$npcs[$key]['name'] = "[No Name]";
 				} else {
 					$npcs[$key]['name'] = preg_replace("/\d+$/", "", trim(str_replace("#", "", str_replace("_", " ", $npc['name']))));
 				}

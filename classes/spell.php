@@ -75,10 +75,11 @@
                 "property" => "ns.name", 
                 "direction" => "DESC"
             );
+            $options['sort'] = (array)reset(json_decode($options['sort']));
             if (strpos($options['sort']['property'], ".") === false) {
                 $options['sort']['property'] = "ns." . $options['sort']['property'];
             }
-            $sort = $this->sort((array)reset(json_decode($options['sort'])), $default_sort);
+            $sort = $this->sort($options['sort'], $default_sort);
             $group = $this->group("ns.id");
             $columns = (!empty($options->columns)) ? $options->columns : array('ns.*');
 
