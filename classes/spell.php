@@ -148,13 +148,6 @@
         }
 
         function processForApi($spells) {
-            global $skilltypes, $sp_spellgroups, $sp_targets;
-            foreach ($spells as $key => $spell) {
-                //$chars[$key]['classId'] = $char['class'];
-                $spells[$key]['categoryName'] = $sp_spellgroups[$spell['spell_category']];
-                $spells[$key]['skillName'] = $skilltypes[$spell['skill']];
-                $spells[$key]['targetType'] = $sp_targets[$spell['targettype']];
-            }
             return $spells;
         }
 
