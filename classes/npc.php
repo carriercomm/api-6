@@ -23,13 +23,17 @@
             );
             $options['sort'] = (array)reset(json_decode($options['sort']));
             if (strpos($options['sort']['property'], ".") === false) {
-                $options['sort']['property'] = "n." . $options['sort']['property'];
+            	if ($options['sort']['property'] == "primaryfaction") {
+            		$options['sort']['property'] = "nf." . $options['sort']['property'];
+            	} else {
+            		$options['sort']['property'] = "n." . $options['sort']['property'];
+            	}
             }
             if ($options['sort']['property'] == 'n.name') {
             	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
             }
             $sort = $this->sort($options['sort'], $default_sort);
-            $columns = (!empty($options->columns)) ? $options->columns : array('n.*');
+            $columns = (!empty($options->columns)) ? $options->columns : array('n.*', 'nf.primaryfaction', 'nf.ignore_primary_assist');
             /*$invalid = $this->findInvalidColumns($columns, 'npc_types');
             if (count($invalid) > 0) {
                 $this->outputHeaders();
@@ -61,11 +65,11 @@
 				// search by name
 				$where = $this->find(strtolower($search), array("LOWER(n.name)"));
 
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n " . $where . $sort);
-                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n " . $where . $sort . $limit);
+                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) " . $where . $sort);
+                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) " . $where . $sort . $limit);
 			} else {
-				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n" . $sort);
-                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n" . $sort . $limit);
+				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id)" . $sort);
+                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id)" . $sort . $limit);
 			}
 			
 			$npcs = $this->processForApi($npcs);
@@ -219,18 +223,29 @@
 				$npcs[$key]['zones'] = (empty($spawns)) ? "Nowhere" : implode(", ", $spawns);
 
 				// Attach npc faction information
+				$faction_hits = array();
+
 				$faction = $this->db->QueryFetchRow("SELECT * FROM npc_faction WHERE id = :npc_faction_id", array("npc_faction_id" => $npc['npc_faction_id']));
 				if ($faction) {
 					$hits = $this->db->QueryFetchAssoc("SELECT nfe.faction_id, fl.name, nfe.value, nfe.npc_value, nfe.temp FROM npc_faction_entries nfe LEFT JOIN faction_list fl ON (fl.id = nfe.faction_id) WHERE nfe.npc_faction_id = :npc_faction_id", array("npc_faction_id" => $npc['npc_faction_id']));
+
+					foreach($hits as $hit) {
+						$faction_hits[] = "[" . $hit['faction_id'] . "] " . $hit['name'] . ": " . (((int)$hit['value'] > 0) ? "+" . $hit['value'] : $hit['value']);
+					}
+
+					$npcs[$key]['faction_hits'] = implode(", ", $faction_hits);
+
+					$npcs[$key]['npc_faction_id'] = "[" . $faction['id'] . "] " . $faction['name'];
+
 					$faction['hits'] = $hits;
 					$npcs[$key]['faction'] = $faction;
-				}
 
-				// Attach human readable bodytype
-				if (intval($npc['bodytype']) > 68) {
-					$npcs[$key]['bodytypeName'] = "Unknown";
+					$primaryfaction = $this->db->QueryFetchSingleValue("SELECT name FROM faction_list WHERE id = :id", array("id" => $npc['primaryfaction']));
+					$npcs[$key]['primaryfaction'] = $primaryfaction;
 				} else {
-					$npcs[$key]['bodytypeName'] = trim(preg_replace("/\d+$/", "", str_replace("_", " ", $bodytypes[$npc['bodytype']])));
+					$npcs[$key]['faction_hits'] = "None";
+					$npcs[$key]['npc_faction_id'] = "None";
+					$npcs[$key]['primaryfaction'] = "None";
 				}
 				
 				// Cleanup last name and first name to be human readable
@@ -242,13 +257,6 @@
 				} else {
 					$npcs[$key]['name'] = preg_replace("/\d+$/", "", trim(str_replace("#", "", str_replace("_", " ", $npc['name']))));
 				}
-
-				// Attach race + class combo string
-				$race = $races[$npc['race']];
-				$class = $classes[$npc['class']];
-				$npcs[$key]['raceName'] = $race;
-				$npcs[$key]['className'] = $class;
-				$npcs[$key]['raceClass'] = $race . " " . $class;
 			}
 			return $npcs;
 		}
