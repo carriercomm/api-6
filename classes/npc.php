@@ -59,7 +59,7 @@
 
 			if (is_numeric($search)) {
 				// numeric, search by id
-				$npcs = array($this->getNpcById($search, false));
+				$npcs = array($this->getNpcById($search));
 				$count = count($npcs);
 			} elseif (!empty($search)) {
 				// search by name
@@ -82,18 +82,27 @@
 		}
 
 		function searchmerchants($params = null, $options) {
-			$this->outputHeaders();
 			// options will contain params such as limit and columns
-			$group = (property_exists($options, 'group') && $options->group) ? true : false;
-            $limit = (property_exists($options, 'limit') && $options->limit > 0) ? " LIMIT " . $options->limit : ((property_exists($options, 'limit') && $options->limit === 0) ? "" : " LIMIT 75");
+			$limit = $this->paginate($options['limit'], $options['page']);
+            $default_sort = array(
+                "property" => "name", 
+                "direction" => "ASC"
+            );
+            $options['sort'] = (array)reset(json_decode($options['sort']));
+            if (strpos($options['sort']['property'], ".") === false) {
+        		$options['sort']['property'] = "n." . $options['sort']['property'];
+            }
+            if ($options['sort']['property'] == 'n.name') {
+            	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
+            }
+            $sort = $this->sort($options['sort'], $default_sort);
             $columns = (!empty($options->columns)) ? $options->columns : array('n.*');
-            $invalid = $this->findInvalidColumns($columns, 'npc_types');
-
+            /*$invalid = $this->findInvalidColumns($columns, 'npc_types');
             if (count($invalid) > 0) {
                 $this->outputHeaders();
                 echo json_encode(array("error" => "The following are invalid columns: " . implode(", ", $invalid)));
                 die();
-            }
+            }*/
 
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -103,13 +112,20 @@
                 }
             }
 
-            $columns[] = "(SELECT COUNT(*) FROM merchantlist ml WHERE ml.merchantid = n.merchant_id) AS numItems";
-            $columns[] = "(SELECT COUNT(*) FROM merchantlist_temp mlt WHERE mlt.npcid = n.id) AS numTempItems";
+            //$columns[] = "(SELECT COUNT(*) FROM merchantlist ml WHERE ml.merchantid = n.merchant_id) AS numItems";
+            //$columns[] = "(SELECT COUNT(*) FROM merchantlist_temp mlt WHERE mlt.npcid = n.id) AS numTempItems";
 
-			$search = str_replace(" ", "%", urldecode(reset($params)));
+			if (!empty(trim($options['query']))) {
+                $search = $options['query'];
+            } else {
+                if (!empty($params[0])) {
+                    $search = str_replace(" ", "%", urldecode(reset($params)));
+                }
+            }
+
 			if (is_numeric($search)) {
 				// numeric, search by id
-				$npcs = array($this->getNpcById($search, false));
+				$npcs = array($this->getNpcById($search));
 				$count = count($npcs);
 			} elseif (!empty($search)) {
 				// search by name
@@ -206,12 +222,8 @@
 		//
 		// Get npc by id, used by both search methods
 		//
-		function getNpcById($id, $verbose = null) {
-			if ($verbose) {
-				return $this->db->QueryFetchRow("SELECT n.* FROM npc_types n WHERE n.id = :id LIMIT 1", array("id" => $id));
-			} else {
-				return $this->db->QueryFetchRow("SELECT n.id, n.name, n.lastname, n.level, n.race, n.class, n.bodytype, n.hp, n.mana, n.gender, n.size, n.mindmg, n.maxdmg, n.attack_count, n.aggroradius, n.runspeed, n.attack_speed, n.npc_faction_id FROM npc_types n WHERE n.id = :id LIMIT 1", array("id" => $id));
-			}
+		function getNpcById($id) {
+			return $this->db->QueryFetchRow("SELECT " . implode(",", $columns) . " FROM npc_types n WHERE n.id = :id LIMIT 1", array("id" => $id));
 		}
 
 		function processForApi($npcs) {

@@ -20,7 +20,11 @@
                 "property" => "long_name", 
                 "direction" => "ASC"
             );
-            $sort = $this->sort((array)reset(json_decode($options['sort'])), $default_sort);
+            $options['sort'] = (array)reset(json_decode($options['sort']));
+            if (strpos($options['sort']['property'], ".") === false) {
+                $options['sort']['property'] = "z." . $options['sort']['property'];
+            }
+            $sort = $this->sort($options['sort'], $default_sort);
             $columns = (!empty($options->columns)) ? $options->columns : array('z.*');
             /*$invalid = $this->findInvalidColumns($columns, 'zone');
             if (count($invalid) > 0) {
