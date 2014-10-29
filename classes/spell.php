@@ -16,6 +16,7 @@
         //
         function search($params = null, $options = null) {
             $limit = $this->paginate($options['limit'], $options['page']);
+            
             $default_sort = array(
                 "property" => "name", 
                 "direction" => "ASC"
@@ -26,6 +27,7 @@
                 $options['sort']['property'] = "s." . $options['sort']['property'];
             }
             $sort = $this->sort($options['sort'], $default_sort);
+            
             $columns = (!empty($options->columns)) ? $options->columns : array('s.*');
             /*$invalid = $this->findInvalidColumns($columns, 'spells_new');
             if (count($invalid) > 0) {
@@ -42,6 +44,20 @@
                 }
             }
 
+            if (!empty($options['filter'])) {
+                $options['filter'] = (array)json_decode($options['filter']);
+            }
+
+            foreach($options['filter'] as $key => $filter) {
+                $options['filter'][$key] = (array)$options['filter'][$key];
+                $filter = (array)$filter;
+                if (strpos($filter['field'], ".") === false) {
+                    $options['filter'][$key]['field'] = "s." . $options['filter'][$key]['field'];
+                }
+            }
+
+            $filters = $this->filter($options['filter']);
+
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];
             } else {
@@ -50,19 +66,16 @@
                 }
             }
             
+            $search = (!empty($search)) ? $search : "";
+
             if (is_numeric($search)) {
                 // numeric, search by id
                 $spells = array($this->getSpellById($search, false));
                 $count = count($spells);
-            } elseif (!empty($search)) {
-                // search by name
-                $where = $this->find(strtolower($search), array("LOWER(s.name)"));
-
+            } else {
+                $where = $this->find(strtolower($search), array("LOWER(s.name)"), $filters);
                 $count = $this->db->QueryFetchSingleValue("SELECT COUNT(s.id) FROM spells_new s " . $where . $sort);
                 $spells = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM spells_new s " . $where . $sort . $limit);
-            } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(s.id) FROM spells_new s WHERE s.name != ''" . $sort);
-                $spells = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM spells_new s WHERE s.name != ''" . $sort . $limit);
             }
 
             $spells = $this->processForApi($spells);
@@ -76,6 +89,7 @@
         //
         function searchspellsets($params = null, $options = null) {
             $limit = $this->paginate($options['limit'], $options['page']);
+            
             $default_sort = array(
                 "property" => "ns.name", 
                 "direction" => "DESC"
@@ -86,8 +100,8 @@
             }
             $sort = $this->sort($options['sort'], $default_sort);
             $group = $this->group("ns.id");
+            
             $columns = (!empty($options->columns)) ? $options->columns : array('ns.*');
-
             if ($columns) {
                 foreach($columns as $key => $column) {
                     if (strpos($column, ".") === false) {
@@ -95,6 +109,20 @@
                     }
                 }
             }
+
+            if (!empty($options['filter'])) {
+                $options['filter'] = (array)json_decode($options['filter']);
+            }
+
+            foreach($options['filter'] as $key => $filter) {
+                $options['filter'][$key] = (array)$options['filter'][$key];
+                $filter = (array)$filter;
+                if (strpos($filter['field'], ".") === false) {
+                    $options['filter'][$key]['field'] = "ns." . $options['filter'][$key]['field'];
+                }
+            }
+
+            $filters = $this->filter($options['filter']);
 
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];
@@ -104,16 +132,11 @@
                 }
             }
 
-            if (!empty($search)) {
-                // search by name
-                $where = $this->find(strtolower($search), array("LOWER(s.name)", "LOWER(ns.name)"));
+            $search = (!empty($search)) ? $search : "";
 
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $sort);
-                $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $group . $sort . $limit);
-            } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id)" . $sort);
-                $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id)" . $group . $sort . $limit);
-            }
+            $where = $this->find(strtolower($search), array("LOWER(s.name)", "LOWER(ns.name)"), $filters);
+            $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $sort);
+            $spellsets = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $group . $sort . $limit);
 
             $spellsets = $this->processSpellsetsForApi($spellsets);
 

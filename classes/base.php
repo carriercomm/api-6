@@ -85,26 +85,72 @@
             }
         }
 
-        public function find($search, $fields, $static) {
-            if ((!empty($search) && !empty($fields)) || !empty($static)) {
-                if (count($fields) > 0) {
-                    $where = "WHERE (";
-                    $conditions = array();
-                    foreach ($fields as $field) {
-                        $conditions[] = $field . " LIKE '%" . mysql_real_escape_string($search) . "%'";
+        public function filter($filters) {
+            $operators = array(
+                "gt" => ">",
+                "gte" => ">=",
+                "lt" => "<",
+                "lte" => "<=",
+                "eq" => "=",
+                "neq" => "!=",
+                "lk" => "LIKE",
+                "nlk" => "NOT LIKE"
+            );
+
+            $string_operators = array('eq', 'neq', 'lk', 'nlk');
+
+            $f = array();
+            foreach($filters as $filter) {
+                $filter = (array)$filter;
+                if (in_array($filter['operator'], $string_operators)) {
+                    switch($filter['operator']) {
+                        case 'eq':
+                        case 'neq':
+                            if (!is_numeric($filter['value'])) {
+                                $f[] = $filter['field'] . " " . $operators[$filter['operator']] . " '" . $filter['value'] . "'";
+                            } else {
+                                $f[] = $filter['field'] . " " . $operators[$filter['operator']] . " " . $filter['value'];
+                            }
+                            break;
+                        default:
+                            $f[] = $filter['field'] . " " . $operators[$filter['operator']] . " '%" . $filter['value'] . "%'";
+                            break;
                     }
-                    $where .= implode(" OR ", $conditions) . ") ";
+                } else {
+                    $f[] = $filter['field'] . " " . $operators[$filter['operator']] . " " . $filter['value'];
+                }
+            }
+            return $f;
+        }
+
+        public function find($search, $fields, $static) {
+            if ((!empty($fields)) || !empty($static)) {
+                $where = "WHERE (";
+                if (count($fields) > 0) {
+                    $conditions = array();
+                    if (!empty($search)) {
+                        foreach ($fields as $field) {
+                            $conditions[] = $field . " LIKE '%" . mysql_real_escape_string($search) . "%'";
+                        }
+                        $where .= implode(" OR ", $conditions) . ") ";
+                    }
                     if (!empty($static) && count($static) > 0) {
                         $wconditions = array();
                         foreach ($static as $value) {
                             $wconditions[] = $value;
                         }
-                        $where .= "AND (" . implode(" AND ", $wconditions) . ") ";
+                        if (!empty($search)) {
+                            $where .= "AND (" . implode(" AND ", $wconditions) . ") ";
+                        } else {
+                            $where .= implode(" AND ", $wconditions) . ") ";
+                        }
+                    }
+                    if (empty($search) && ((empty($static) || count($static) < 1))) {
+                        $where = "";
                     }
                     return $where;
                 } else {
                     if (!empty($static) && count($static) > 0) {
-                        $where = "WHERE (";
                         $wconditions = array();
                         foreach ($static as $value) {
                             $wconditions[] = $value;

@@ -15,8 +15,8 @@
 		// Searches npc_types table
 		//
 		function search($params = null, $options = null) {
-			// options will contain params such as limit and columns
 			$limit = $this->paginate($options['limit'], $options['page']);
+            
             $default_sort = array(
                 "property" => "name", 
                 "direction" => "ASC"
@@ -33,6 +33,7 @@
             	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
             }
             $sort = $this->sort($options['sort'], $default_sort);
+            
             $columns = (!empty($options->columns)) ? $options->columns : array('n.*', 'nf.primaryfaction', 'nf.ignore_primary_assist');
             /*$invalid = $this->findInvalidColumns($columns, 'npc_types');
             if (count($invalid) > 0) {
@@ -49,6 +50,25 @@
                 }
             }
 
+            if (!empty($options['filter'])) {
+                $options['filter'] = (array)json_decode($options['filter']);
+            }
+
+            foreach($options['filter'] as $key => $filter) {
+                $options['filter'][$key] = (array)$options['filter'][$key];
+                $filter = (array)$filter;
+                if ($filter['field'] == "primaryfaction") {
+                	if (strpos($filter['field'], ".") === false) {
+                		$options['filter'][$key]['field'] = "nf." . $options['filter'][$key]['field'];
+                	}	
+                }
+                if (strpos($filter['field'], ".") === false) {
+                    $options['filter'][$key]['field'] = "n." . $options['filter'][$key]['field'];
+                }
+            }
+
+            $filters = $this->filter($options['filter']);
+
 			if (!empty(trim($options['query']))) {
                 $search = $options['query'];
             } else {
@@ -57,19 +77,16 @@
                 }
             }
 
+            $search = (!empty($search)) ? $search : "";
+
 			if (is_numeric($search)) {
 				// numeric, search by id
 				$npcs = array($this->getNpcById($search));
 				$count = count($npcs);
-			} elseif (!empty($search)) {
-				// search by name
-				$where = $this->find(strtolower($search), array("LOWER(n.name)"));
-
+			} else {
+				$where = $this->find(strtolower($search), array("LOWER(n.name)"), $filters);
                 $count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) " . $where . $sort);
                 $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) " . $where . $sort . $limit);
-			} else {
-				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id)" . $sort);
-                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id)" . $sort . $limit);
 			}
 			
 			$npcs = $this->processForApi($npcs);

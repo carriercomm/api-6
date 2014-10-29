@@ -16,6 +16,7 @@
         //
         function search($params = null, $options = null) {
             $limit = $this->paginate($options['limit'], $options['page']);
+            
             $default_sort = array(
                 "property" => "long_name", 
                 "direction" => "ASC"
@@ -25,6 +26,7 @@
                 $options['sort']['property'] = "z." . $options['sort']['property'];
             }
             $sort = $this->sort($options['sort'], $default_sort);
+            
             $columns = (!empty($options->columns)) ? $options->columns : array('z.*');
             /*$invalid = $this->findInvalidColumns($columns, 'zone');
             if (count($invalid) > 0) {
@@ -41,6 +43,20 @@
                 }
             }
             
+            if (!empty($options['filter'])) {
+                $options['filter'] = (array)json_decode($options['filter']);
+            }
+
+            foreach($options['filter'] as $key => $filter) {
+                $options['filter'][$key] = (array)$options['filter'][$key];
+                $filter = (array)$filter;
+                if (strpos($filter['field'], ".") === false) {
+                    $options['filter'][$key]['field'] = "z." . $options['filter'][$key]['field'];
+                }
+            }
+
+            $filters = $this->filter($options['filter']);
+
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];
             } else {
@@ -49,19 +65,17 @@
                 }
             }
 
+            $search = (!empty($search)) ? $search : "";
+
             if (is_numeric($search)) {
                 // numeric, search by id
                 $zones = $this->getZonesById($search, $columns);
                 $count = count($zones);
-            } elseif (!empty($search)) {
+            } else {
                 // search by name
-                $where = $this->find(strtolower($search), array("LOWER(z.short_name)", "LOWER(z.long_name)"));
-
+                $where = $this->find(strtolower($search), array("LOWER(z.short_name)", "LOWER(z.long_name)"), $filters);
                 $count = $this->db->QueryFetchSingleValue("SELECT COUNT(z.id) FROM zone z " . $where . $sort);
                 $zones = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM zone z " . $where . $sort . $limit);
-            } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(z.id) FROM zone z" . $sort);
-                $zones = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM zone z" . $sort . $limit);
             }
 
             // Process query data before returning

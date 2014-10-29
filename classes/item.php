@@ -12,10 +12,11 @@
         }
 
         //
-        // Searches item table with minimal info returned
+        // Searches items table
         //
         function search($params = null, $options = null) {
             $limit = $this->paginate($options['limit'], $options['page']);
+            
             $default_sort = array(
                 "property" => "Name", 
                 "direction" => "ASC"
@@ -25,6 +26,7 @@
                 $options['sort']['property'] = "i." . $options['sort']['property'];
             }
             $sort = $this->sort($options['sort'], $default_sort);
+            
             $columns = (!empty($options->columns)) ? $options->columns : array('i.*');
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -33,7 +35,21 @@
                     }
                 }
             }
-            
+
+            if (!empty($options['filter'])) {
+                $options['filter'] = (array)json_decode($options['filter']);
+            }
+
+            foreach($options['filter'] as $key => $filter) {
+                $options['filter'][$key] = (array)$options['filter'][$key];
+                $filter = (array)$filter;
+                if (strpos($filter['field'], ".") === false) {
+                    $options['filter'][$key]['field'] = "i." . $options['filter'][$key]['field'];
+                }
+            }
+
+            $filters = $this->filter($options['filter']);
+
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];
             } else {
@@ -42,19 +58,16 @@
                 }
             }
             
+            $search = (!empty($search)) ? $search : "";
+
             if (is_numeric($search)) {
                 // numeric, search by id
                 $items = array($this->getItemById($search, $columns));
                 $count = 1;
-            } elseif (!empty($search)) {
-                // search by name
-                $where = $this->find(strtolower($search), array("LOWER(Name)"));
-
+            } else {
+                $where = $this->find(strtolower($search), array("LOWER(Name)"), $filters);
                 $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i " . $where . $sort);
                 $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i " . $where . $sort . $limit);
-            } else {
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(i.id) FROM items i" . $sort);
-                $items = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM items i" . $sort . $limit);
             }
 
             $items = $this->processForApi($items);
