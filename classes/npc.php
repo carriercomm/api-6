@@ -18,22 +18,26 @@
 			$limit = $this->paginate($options['limit'], $options['page']);
             
             $default_sort = array(
-                "property" => "name", 
+                "property" => "LOWER(REPLACE(n.name, '#', ''))", 
                 "direction" => "ASC"
             );
             $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (strpos($options['sort']['property'], ".") === false) {
-            	if ($options['sort']['property'] == "primaryfaction") {
-            		$options['sort']['property'] = "nf." . $options['sort']['property'];
-            	} else {
-            		$options['sort']['property'] = "n." . $options['sort']['property'];
-            	}
+            if (!empty($options['sort'])) {
+            	if (strpos($options['sort']['property'], ".") === false) {
+	            	if ($options['sort']['property'] == "primaryfaction") {
+	            		$options['sort']['property'] = "nf." . $options['sort']['property'];
+	            	} elseif ($options['sort']['property'] == "zones") {
+	            		$options['sort']['property'] = "z." . $options['sort']['property'];
+	            	} else {
+	            		$options['sort']['property'] = "n." . $options['sort']['property'];
+	            	}
+	            }
+	            if ($options['sort']['property'] == 'n.name') {
+	            	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
+	            }
             }
-            if ($options['sort']['property'] == 'n.name') {
-            	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
-            }
+
             $sort = $this->sort($options['sort'], $default_sort);
-            
             $columns = (!empty($options->columns)) ? $options->columns : array('n.*', 'nf.primaryfaction', 'nf.ignore_primary_assist');
             /*$invalid = $this->findInvalidColumns($columns, 'npc_types');
             if (count($invalid) > 0) {
@@ -62,6 +66,11 @@
                 		$options['filter'][$key]['field'] = "nf." . $options['filter'][$key]['field'];
                 	}	
                 }
+                if ($filter['field'] == "zones") {
+                	if (strpos($filter['field'], ".") === false) {
+                		$options['filter'][$key]['field'] = "z." . $options['filter'][$key]['field'];
+                	}
+                }
                 if (strpos($filter['field'], ".") === false) {
                     $options['filter'][$key]['field'] = "n." . $options['filter'][$key]['field'];
                 }
@@ -84,9 +93,32 @@
 				$npcs = array($this->getNpcById($search));
 				$count = count($npcs);
 			} else {
-				$where = $this->find(strtolower($search), array("LOWER(n.name)"), $filters);
-                $count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) " . $where . $sort);
-                $npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) " . $where . $sort . $limit);
+				$where = $this->find(strtolower($search), array("LOWER(n.name)", "LOWER(n.lastname)"), $filters);
+                
+				$sql = "
+                	SELECT 
+						" . implode(",", $columns) . ",
+						z.zones AS zones,
+						z.count AS numZones
+					FROM
+						npc_types n 
+						LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) 
+						INNER JOIN (
+							SELECT 
+								se.npcID AS znpcid, 
+								count(DISTINCT s2.zone) as count,
+								GROUP_CONCAT(DISTINCT s2.zone ORDER BY s2.zone) AS zones
+							FROM
+								spawn2 s2
+							LEFT JOIN
+								spawnentry se ON (se.spawngroupID = s2.spawngroupID)
+							GROUP BY
+								se.npcID
+						) z ON z.znpcid = n.id " . $where . $sort . "
+                ";
+
+                $count = $this->db->QueryNumberOfRows($sql);
+                $npcs = $this->db->QueryFetchAssoc($sql . $limit);
 			}
 			
 			$npcs = $this->processForApi($npcs);
@@ -98,22 +130,32 @@
 			echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $npcs)) . ");";
 		}
 
-		function searchmerchants($params = null, $options) {
-			// options will contain params such as limit and columns
+		function searchmerchants($params = null, $options = null) {
 			$limit = $this->paginate($options['limit'], $options['page']);
+            
             $default_sort = array(
-                "property" => "name", 
+                "property" => "LOWER(REPLACE(n.name, '#', ''))", 
                 "direction" => "ASC"
             );
             $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (strpos($options['sort']['property'], ".") === false) {
-        		$options['sort']['property'] = "n." . $options['sort']['property'];
+            if (!empty($options['sort'])) {
+            	if (strpos($options['sort']['property'], ".") === false) {
+	            	if ($options['sort']['property'] == "primaryfaction") {
+	            		$options['sort']['property'] = "nf." . $options['sort']['property'];
+	            	} elseif ($options['sort']['property'] == "zones") {
+	            		$options['sort']['property'] = "z." . $options['sort']['property'];
+	            	} else {
+	            		$options['sort']['property'] = "n." . $options['sort']['property'];
+	            	}
+	            }
+	            if ($options['sort']['property'] == 'n.name') {
+	            	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
+	            }
             }
-            if ($options['sort']['property'] == 'n.name') {
-            	$options['sort']['property'] = "LOWER(REPLACE(n.name, '#', ''))";
-            }
+            
             $sort = $this->sort($options['sort'], $default_sort);
-            $columns = (!empty($options->columns)) ? $options->columns : array('n.*');
+            //$group = $this->group("n.id");
+            $columns = (!empty($options->columns)) ? $options->columns : array('n.*', 'nf.primaryfaction', 'nf.ignore_primary_assist');
             /*$invalid = $this->findInvalidColumns($columns, 'npc_types');
             if (count($invalid) > 0) {
                 $this->outputHeaders();
@@ -132,6 +174,30 @@
             //$columns[] = "(SELECT COUNT(*) FROM merchantlist ml WHERE ml.merchantid = n.merchant_id) AS numItems";
             //$columns[] = "(SELECT COUNT(*) FROM merchantlist_temp mlt WHERE mlt.npcid = n.id) AS numTempItems";
 
+			if (!empty($options['filter'])) {
+                $options['filter'] = (array)json_decode($options['filter']);
+            }
+
+            foreach($options['filter'] as $key => $filter) {
+                $options['filter'][$key] = (array)$options['filter'][$key];
+                $filter = (array)$filter;
+                if ($filter['field'] == "primaryfaction") {
+                	if (strpos($filter['field'], ".") === false) {
+                		$options['filter'][$key]['field'] = "nf." . $options['filter'][$key]['field'];
+                	}
+                }
+                if ($filter['field'] == "zones") {
+                	if (strpos($filter['field'], ".") === false) {
+                		$options['filter'][$key]['field'] = "z." . $options['filter'][$key]['field'];
+                	}
+                }
+                if (strpos($filter['field'], ".") === false) {
+                    $options['filter'][$key]['field'] = "n." . $options['filter'][$key]['field'];
+                }
+            }
+
+            $filters = $this->filter($options['filter']);
+
 			if (!empty(trim($options['query']))) {
                 $search = $options['query'];
             } else {
@@ -140,28 +206,48 @@
                 }
             }
 
-			if (is_numeric($search)) {
+            $search = (!empty($search)) ? $search : "";
+
+            if (is_numeric($search)) {
 				// numeric, search by id
 				$npcs = array($this->getNpcById($search));
 				$count = count($npcs);
-			} elseif (!empty($search)) {
-				// search by name
-				$params = array("name" => strtolower($search));
-				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN merchantlist ml ON (ml.merchantid = n.merchant_id) LEFT JOIN items i ON (i.id = ml.item) WHERE (LOWER(n.name) LIKE '%:name%' OR LOWER(i.name) LIKE '%:name%') AND n.merchant_id > 0 AND n.merchant_id IS NOT NULL GROUP BY n.id", $params);
-				$npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN merchantlist ml ON (ml.merchantid = n.merchant_id) LEFT JOIN items i ON (i.id = ml.item) WHERE (LOWER(n.name) LIKE '%:name%' OR LOWER(i.name) LIKE '%:name%') AND n.merchant_id > 0 AND n.merchant_id IS NOT NULL GROUP BY n.id ORDER BY LOWER(REPLACE(n.name, '#', '')) ASC" . $limit, $params);
 			} else {
-				$count = $this->db->QueryFetchSingleValue("SELECT COUNT(n.id) FROM npc_types n LEFT JOIN merchantlist ml ON (ml.merchantid = n.merchant_id) LEFT JOIN items i ON (i.id = ml.item) WHERE n.merchant_id > 0 AND n.merchant_id IS NOT NULL GROUP BY n.id");
-				$npcs = $this->db->QueryFetchAssoc("SELECT " . implode(",", $columns) . " FROM npc_types n LEFT JOIN merchantlist ml ON (ml.merchantid = n.merchant_id) LEFT JOIN items i ON (i.id = ml.item) WHERE n.merchant_id > 0 AND n.merchant_id IS NOT NULL GROUP BY n.id ORDER BY LOWER(REPLACE(n.name, '#', '')) ASC" . $limit);
+				$filters[] = "n.merchant_id > 0";
+				$filters[] = "n.merchant_id IS NOT NULL";
+				$where = $this->find(strtolower($search), array("LOWER(n.name)", "LOWER(n.lastname)"), $filters);
+
+                $sql = "
+                	SELECT 
+						" . implode(",", $columns) . ",
+						z.zones AS zones,
+						z.count AS numZones
+					FROM
+						npc_types n 
+						LEFT JOIN npc_faction nf ON (nf.id = n.npc_faction_id) 
+						INNER JOIN (
+							SELECT 
+								se.npcID AS znpcid, 
+								count(DISTINCT s2.zone) as count,
+								GROUP_CONCAT(DISTINCT s2.zone ORDER BY s2.zone) AS zones
+							FROM
+								spawn2 s2
+							LEFT JOIN
+								spawnentry se ON (se.spawngroupID = s2.spawngroupID)
+							GROUP BY
+								se.npcID
+						) z ON z.znpcid = n.id " . $where . $sort . "
+                ";
+
+                $count = $this->db->QueryNumberOfRows($sql);
+                $npcs = $this->db->QueryFetchAssoc($sql . $limit);
 			}
 			
 			$npcs = $this->merchantProcessForApi($npcs, $search);
 			$npcs = $this->processForApi($npcs);
-			if ($group) {
-				$npcs = $this->groupData($npcs);
-			}
 
 			$this->outputHeaders();
-			echo json_encode(array("total" => $count, "limit" => intval(str_replace(" LIMIT ", "", $limit)), "results" => $npcs));
+			echo $this->callback . "(" . json_encode(array("totalCount" => $count, "limit" => $options['limit'], "data" => $npcs)) . ");";
 		}
 
 		function searchhorses($params = null, $options) {
@@ -247,9 +333,9 @@
 			global $bodytypes, $races, $classes;
 			foreach ($npcs as $key => $npc) {
 				// Attach zone spawn info
-				$spawns = $this->db->QueryFetchColumn("SELECT DISTINCT COALESCE(s2.zone, '') FROM spawnentry s LEFT JOIN spawn2 s2 ON (s.spawngroupID = s2.spawngroupID) WHERE s.npcID = :npcid", array("npcid" => $npc['id']));
+				/*$spawns = $this->db->QueryFetchColumn("SELECT DISTINCT COALESCE(s2.zone, '') FROM spawnentry s LEFT JOIN spawn2 s2 ON (s.spawngroupID = s2.spawngroupID) WHERE s.npcID = :npcid", array("npcid" => $npc['id']));
 				$spawns = array_filter($spawns);
-				$npcs[$key]['zones'] = (empty($spawns)) ? "Nowhere" : implode(", ", $spawns);
+				$npcs[$key]['zones'] = (empty($spawns)) ? "Nowhere" : implode(", ", $spawns);*/
 
 				// Attach npc faction information
 				$faction_hits = array();
@@ -291,13 +377,12 @@
 		}
 
 		function merchantProcessForApi($npcs, $search) {
-			foreach ($npcs as $key => $npc) {
-				if ($npc['merchant_id'] == 'NULL' || $npc['merchant_id'] < 1 || $npc['merchant_id'] == 999999) {
-					$npcs[$key]['isMerchant'] = false;
-				} else {
-					$npcs[$key]['isMerchant'] = true;
-				}
-
+			//foreach ($npcs as $key => $npc) {
+				/*$spawns = $this->db->QueryFetchColumn("SELECT DISTINCT COALESCE(s2.zone, '') FROM spawnentry s LEFT JOIN spawn2 s2 ON (s.spawngroupID = s2.spawngroupID) WHERE s.npcID = :npcid", array("npcid" => $npc['id']));
+				$spawns = array_filter($spawns);
+				$npcs[$key]['zones'] = (empty($spawns)) ? "Nowhere" : implode(", ", $spawns);
+				*/
+				/*
 				$items = $this->db->QueryFetchColumn("SELECT i.name FROM merchantlist ml LEFT JOIN items i ON (i.id = ml.item) WHERE ml.merchantid = :merchantid AND LOWER(i.name) LIKE '%:search%'", array("merchantid" => $npc['merchant_id'], "search" => $search));
 				$items = array_filter($items);
 
@@ -305,7 +390,8 @@
 				$itemstmp = array_filter($itemstmp);
 				$items = array_merge($items, $itemstmp);
 				$npcs[$key]['matchingItems'] = (empty($items)) ? "None" : implode(", ", $items);
-			}
+				*/
+			//}
 
 			return $npcs;
 		}
