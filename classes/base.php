@@ -71,7 +71,21 @@
             return "LIMIT " . $start . ", " . $limit;
         }
 
-        public function sort($sort, $default) {
+        public function sort($sort, $default, $prefix, $replace) {
+            $sort = (array)reset(json_decode($sort));
+            if (!empty($sort)) {
+                if (strpos($sort['property'], ".") === false) {
+                    $sort['property'] = $prefix . "." . $sort['property'];
+                }
+                if (!empty($replace)) {
+                    foreach ($replace as $key => $value) {
+                        if ($sort['property'] == $key) {
+                            $sort['property'] = $value;
+                        }
+                    }
+                }
+            }
+
             if (!empty($sort)) {
                 return " ORDER BY " . $sort['property'] . " " . $sort['direction'] . " ";
             } else {
@@ -85,7 +99,19 @@
             }
         }
 
-        public function filter($filters) {
+        public function filter($filters, $prefix) {
+            if (!empty($filters)) {
+                $filters = (array)json_decode($filters);
+            }
+
+            foreach($filters as $key => $filter) {
+                $filters[$key] = (array)$filters[$key];
+                $filter = (array)$filter;
+                if (strpos($filter['field'], ".") === false) {
+                    $filters[$key]['field'] = $prefix . "." . $filters[$key]['field'];
+                }
+            }
+
             $operators = array(
                 "gt" => ">",
                 "gte" => ">=",

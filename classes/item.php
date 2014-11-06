@@ -21,13 +21,10 @@
                 "property" => "Name", 
                 "direction" => "ASC"
             );
-            $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (strpos($options['sort']['property'], ".") === false) {
-                $options['sort']['property'] = "i." . $options['sort']['property'];
-            }
-            $sort = $this->sort($options['sort'], $default_sort);
-            
+
+            $sort = $this->sort($options['sort'], $default_sort, 'i', null);
             $columns = (!empty($options->columns)) ? $options->columns : array('i.*');
+
             if ($columns) {
                 foreach($columns as $key => $column) {
                     if (strpos($column, ".") === false) {
@@ -36,19 +33,7 @@
                 }
             }
 
-            if (!empty($options['filter'])) {
-                $options['filter'] = (array)json_decode($options['filter']);
-            }
-
-            foreach($options['filter'] as $key => $filter) {
-                $options['filter'][$key] = (array)$options['filter'][$key];
-                $filter = (array)$filter;
-                if (strpos($filter['field'], ".") === false) {
-                    $options['filter'][$key]['field'] = "i." . $options['filter'][$key]['field'];
-                }
-            }
-
-            $filters = $this->filter($options['filter']);
+            $filters = $this->filter($options['filter'], 'i');
 
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];

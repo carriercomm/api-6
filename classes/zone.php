@@ -21,19 +21,9 @@
                 "property" => "long_name", 
                 "direction" => "ASC"
             );
-            $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (strpos($options['sort']['property'], ".") === false) {
-                $options['sort']['property'] = "z." . $options['sort']['property'];
-            }
-            $sort = $this->sort($options['sort'], $default_sort);
             
+            $sort = $this->sort($options['sort'], $default_sort, 'z', null);
             $columns = (!empty($options->columns)) ? $options->columns : array('z.*');
-            /*$invalid = $this->findInvalidColumns($columns, 'zone');
-            if (count($invalid) > 0) {
-                $this->outputHeaders();
-                echo json_encode(array("error" => "The following are invalid columns: " . implode(", ", $invalid)));
-                die();
-            }*/
 
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -43,19 +33,7 @@
                 }
             }
             
-            if (!empty($options['filter'])) {
-                $options['filter'] = (array)json_decode($options['filter']);
-            }
-
-            foreach($options['filter'] as $key => $filter) {
-                $options['filter'][$key] = (array)$options['filter'][$key];
-                $filter = (array)$filter;
-                if (strpos($filter['field'], ".") === false) {
-                    $options['filter'][$key]['field'] = "z." . $options['filter'][$key]['field'];
-                }
-            }
-
-            $filters = $this->filter($options['filter']);
+            $filters = $this->filter($options['filter'], 'z');
 
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];

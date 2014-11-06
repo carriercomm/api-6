@@ -21,17 +21,8 @@
                 "property" => "LOWER(REPLACE(q.name, '#', ''))", 
                 "direction" => "ASC"
             );
-            $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (!empty($options['sort'])) {
-                if (strpos($options['sort']['property'], ".") === false) {
-                    $options['sort']['property'] = "q." . $options['sort']['property'];
-                }
-                if ($options['sort']['property'] == 'q.name') {
-                    $options['sort']['property'] = "LOWER(REPLACE(q.name, '#', ''))";
-                }
-            }
 
-            $sort = $this->sort($options['sort'], $default_sort);
+            $sort = $this->sort($options['sort'], $default_sort, 'q', array("q.name" => "LOWER(REPLACE(q.name, '#', ''))"));
             $columns = (!empty($options->columns)) ? $options->columns : array('n.*');
 
             if ($columns) {
@@ -42,19 +33,7 @@
                 }
             }
 
-            if (!empty($options['filter'])) {
-                $options['filter'] = (array)json_decode($options['filter']);
-            }
-
-            foreach($options['filter'] as $key => $filter) {
-                $options['filter'][$key] = (array)$options['filter'][$key];
-                $filter = (array)$filter;
-                if (strpos($filter['field'], ".") === false) {
-                    $options['filter'][$key]['field'] = "q." . $options['filter'][$key]['field'];
-                }
-            }
-
-            $filters = $this->filter($options['filter']);
+            $filters = $this->filter($options['filter'], 'q');
 
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];

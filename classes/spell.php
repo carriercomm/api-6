@@ -26,15 +26,9 @@
             if (strpos($options['sort']['property'], ".") === false) {
                 $options['sort']['property'] = "s." . $options['sort']['property'];
             }
-            $sort = $this->sort($options['sort'], $default_sort);
             
+            $sort = $this->sort($options['sort'], $default_sort, 's', null);
             $columns = (!empty($options->columns)) ? $options->columns : array('s.*');
-            /*$invalid = $this->findInvalidColumns($columns, 'spells_new');
-            if (count($invalid) > 0) {
-                $this->outputHeaders();
-                echo json_encode(array("error" => "The following are invalid columns: " . implode(", ", $invalid)));
-                die();
-            }*/
 
             if ($columns) {
                 foreach($columns as $key => $column) {
@@ -48,15 +42,7 @@
                 $options['filter'] = (array)json_decode($options['filter']);
             }
 
-            foreach($options['filter'] as $key => $filter) {
-                $options['filter'][$key] = (array)$options['filter'][$key];
-                $filter = (array)$filter;
-                if (strpos($filter['field'], ".") === false) {
-                    $options['filter'][$key]['field'] = "s." . $options['filter'][$key]['field'];
-                }
-            }
-
-            $filters = $this->filter($options['filter']);
+            $filters = $this->filter($options['filter'], 's');
 
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];
@@ -94,14 +80,12 @@
                 "property" => "ns.name", 
                 "direction" => "DESC"
             );
-            $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (strpos($options['sort']['property'], ".") === false) {
-                $options['sort']['property'] = "ns." . $options['sort']['property'];
-            }
-            $sort = $this->sort($options['sort'], $default_sort);
+            
             $group = $this->group("ns.id");
             
+            $sort = $this->sort($options['sort'], $default_sort, 'ns', null);
             $columns = (!empty($options->columns)) ? $options->columns : array('ns.*');
+            
             if ($columns) {
                 foreach($columns as $key => $column) {
                     if (strpos($column, ".") === false) {
@@ -110,19 +94,7 @@
                 }
             }
 
-            if (!empty($options['filter'])) {
-                $options['filter'] = (array)json_decode($options['filter']);
-            }
-
-            foreach($options['filter'] as $key => $filter) {
-                $options['filter'][$key] = (array)$options['filter'][$key];
-                $filter = (array)$filter;
-                if (strpos($filter['field'], ".") === false) {
-                    $options['filter'][$key]['field'] = "ns." . $options['filter'][$key]['field'];
-                }
-            }
-
-            $filters = $this->filter($options['filter']);
+            $filters = $this->filter($options['filter'], 'ns');
 
             if (!empty(trim($options['query']))) {
                 $search = $options['query'];
