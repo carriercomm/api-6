@@ -23,27 +23,9 @@
             );
 
             $sort = $this->sort($options['sort'], $default_sort, 'q', array("q.name" => "LOWER(REPLACE(q.name, '#', ''))"));
-            $columns = (!empty($options->columns)) ? $options->columns : array('n.*');
-
-            if ($columns) {
-                foreach($columns as $key => $column) {
-                    if (strpos($column, ".") === false) {
-                        $columns[$key] = "n." . $column;
-                    }
-                }
-            }
-
+            $columns = $this->determineColumns($options['columns'], 'n');
             $filters = $this->filter($options['filter'], 'q');
-
-            if (!empty(trim($options['query']))) {
-                $search = $options['query'];
-            } else {
-                if (!empty($params[0])) {
-                    $search = str_replace(" ", "%", urldecode(reset($params)));
-                }
-            }
-
-            $search = (!empty($search)) ? $search : "";
+            $search = $this->determineSearch($options['query'], $params);
 
             if (is_numeric($search)) {
                 // numeric, search by id

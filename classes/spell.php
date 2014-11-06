@@ -21,38 +21,11 @@
                 "property" => "name", 
                 "direction" => "ASC"
             );
-
-            $options['sort'] = (array)reset(json_decode($options['sort']));
-            if (strpos($options['sort']['property'], ".") === false) {
-                $options['sort']['property'] = "s." . $options['sort']['property'];
-            }
             
             $sort = $this->sort($options['sort'], $default_sort, 's', null);
-            $columns = (!empty($options->columns)) ? $options->columns : array('s.*');
-
-            if ($columns) {
-                foreach($columns as $key => $column) {
-                    if (strpos($column, ".") === false) {
-                        $columns[$key] = "s." . $column;
-                    }
-                }
-            }
-
-            if (!empty($options['filter'])) {
-                $options['filter'] = (array)json_decode($options['filter']);
-            }
-
+            $columns = $this->determineColumns($options['columns'], 's');
             $filters = $this->filter($options['filter'], 's');
-
-            if (!empty(trim($options['query']))) {
-                $search = $options['query'];
-            } else {
-                if (!empty($params[0])) {
-                    $search = str_replace(" ", "%", urldecode(reset($params)));
-                }
-            }
-            
-            $search = (!empty($search)) ? $search : "";
+            $search = $this->determineSearch($options['query'], $params);
 
             if (is_numeric($search)) {
                 // numeric, search by id
@@ -84,27 +57,9 @@
             $group = $this->group("ns.id");
             
             $sort = $this->sort($options['sort'], $default_sort, 'ns', null);
-            $columns = (!empty($options->columns)) ? $options->columns : array('ns.*');
-            
-            if ($columns) {
-                foreach($columns as $key => $column) {
-                    if (strpos($column, ".") === false) {
-                        $columns[$key] = "ns." . $column;
-                    }
-                }
-            }
-
+            $columns = $this->determineColumns($options['columns'], 'ns');
             $filters = $this->filter($options['filter'], 'ns');
-
-            if (!empty(trim($options['query']))) {
-                $search = $options['query'];
-            } else {
-                if (!empty($params[0])) {
-                    $search = str_replace(" ", "%", urldecode(reset($params)));
-                }
-            }
-
-            $search = (!empty($search)) ? $search : "";
+            $search = $this->determineSearch($options['query'], $params);
 
             $where = $this->find(strtolower($search), array("LOWER(s.name)", "LOWER(ns.name)"), $filters);
             $count = $this->db->QueryFetchSingleValue("SELECT COUNT(nse.id) FROM npc_spells ns LEFT JOIN npc_spells_entries nse ON (nse.npc_spells_id = ns.id) LEFT JOIN spells_new s ON (nse.spellid = s.id) " . $where . $sort);

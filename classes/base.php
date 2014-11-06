@@ -65,6 +65,30 @@
             header('Access-Control-Allow-Headers: X-Auth-Token, Content-Type, Accept');
         }
 
+        public function determineColumns($columns, $prefix) {
+            $columns = (!empty($columns)) ? $columns : array($prefix . '.*');
+            if ($columns) {
+                foreach($columns as $key => $column) {
+                    if (strpos($column, ".") === false) {
+                        $columns[$key] = $prefix . "." . $column;
+                    }
+                }
+            }
+            return $columns;
+        }
+
+        public function determineSearch($search, $params) {
+            if (!empty(trim($search))) {
+                $search = $search;
+            } else {
+                if (!empty($params[0])) {
+                    $search = str_replace(" ", "%", urldecode(reset($params)));
+                }
+            }
+
+            return (!empty($search)) ? $search : "";
+        }
+
         public function paginate($limit, $page) {
             $limit = (!empty($limit)) ? $limit : 100;
             $start = ($page == 1) ? (($page - 1) * $limit) : ((empty($page)) ? 0 : (($page - 1) * $limit));

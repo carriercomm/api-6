@@ -23,27 +23,9 @@
             );
             
             $sort = $this->sort($options['sort'], $default_sort, 'z', null);
-            $columns = (!empty($options->columns)) ? $options->columns : array('z.*');
-
-            if ($columns) {
-                foreach($columns as $key => $column) {
-                    if (strpos($column, ".") === false) {
-                        $columns[$key] = "z." . $column;
-                    }
-                }
-            }
-            
+            $columns = $this->determineColumns($options['columns'], 'z');
             $filters = $this->filter($options['filter'], 'z');
-
-            if (!empty(trim($options['query']))) {
-                $search = $options['query'];
-            } else {
-                if (!empty($params[0])) {
-                    $search = str_replace(" ", "%", urldecode(reset($params)));
-                }
-            }
-
-            $search = (!empty($search)) ? $search : "";
+            $search = $this->determineSearch($options['query'], $params);
 
             if (is_numeric($search)) {
                 // numeric, search by id
