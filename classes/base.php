@@ -67,7 +67,7 @@
 
         public function paginate($limit, $page) {
             $limit = (!empty($limit)) ? $limit : 100;
-            $start = ($page == 1) ? (($page - 1) * $limit) : ((empty($page)) ? 0 : (($page - 1) * $limit) + 1);
+            $start = ($page == 1) ? (($page - 1) * $limit) : ((empty($page)) ? 0 : (($page - 1) * $limit));
             return "LIMIT " . $start . ", " . $limit;
         }
 
